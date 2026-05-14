@@ -1,0 +1,22 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import url("https://fonts.googleapis.com/css2?family=Playwrite+MX:wght@100..400&display=swap");
+
+.opacity-disabled {
+  opacity: 0.9 !important;
+}
+.logo {
+  font-family: "Playwrite MX", cursive;
+}
+
+.editor .ql-container {
+  min-height: 200px; /* Set chiều cao tối thiểu */
+}
+
+
+.react-datepicker-wrapper input {
+  border: 1px solid;
+  padding: 6px 10px;
+  border-radius: 4px;
+}

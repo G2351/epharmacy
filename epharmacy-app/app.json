@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "Epharmacy",
+    "slug": "Epharmacy",
+    "version": "1.0.0",
+    "scheme": "myapp",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.yourname.epharmacy",
+      "newArchEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "Epharmacy"
+    },
+    "extra": {
+      "apiUrl": "http://192.168.1.8:3052",
+      "apiUrlPayment": "http://192.168.1.8:3052",
+      "publicKey": "",
+      "googleKey": "",
+      "mapboxKey": "",
+      "eas": {
+        "projectId": "36b97486-5f93-4511-9b74-6dccfc139211"
+      }
+    }
+  }
+}

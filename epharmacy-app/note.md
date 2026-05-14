@@ -1,0 +1,3 @@
+expo init
+card payment
+number of card : 424242........................
