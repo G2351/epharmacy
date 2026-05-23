@@ -1,4 +1,4 @@
-// Sidebar.js
+
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -13,40 +13,29 @@ import {
 import { getProfile } from "../utils/user/profileUser";
 import { scaleHeight, scaleWidth } from "../utils/config";
 import { useSelector } from "react-redux";
-const { width, height } = Dimensions.get("window"); // lấy cả chiều cao màn hình
+import Icon from "react-native-vector-icons/Ionicons";
+
+const { width, height } = Dimensions.get("window");
+
+const MENU_ITEMS = [
+  { label: "Giỏ hàng",           screen: "Cart",          icon: "bag-outline" },
+  { label: "Mua thuốc",          screen: "Medicines",     icon: "medkit-outline" },
+  { label: "Lịch sử đơn hàng",   screen: "OrderHistory",  icon: "receipt-outline" },
+  { label: "Bài viết",           screen: "Articles",      icon: "newspaper-outline" },
+];
 
 const Sidebar = ({ navigation, toggleSidebar, visible }) => {
   const { name } = useSelector((state) => state.profile);
-  console.log(name);
-  // const [profile, setProfile] = useState(null);
-  // console.log('profile: ', profile);
-  const [translateX] = useState(new Animated.Value(-width * 0.75)); // 3/4 màn hình
-  // const fetchProfile = async () => {
-  //   const { userId, name, email } = await getProfile();
-  //   // console.log({userId, name});
-  //   setProfile({ userId, name, email });
-  // };
-  // useEffect(() => {
-  //   fetchProfile();
-  // }, []);
-  // Hiệu ứng mở và đóng Sidebar
+  const [translateX] = useState(new Animated.Value(-width * 0.75));
+
   useEffect(() => {
-    if (visible) {
-      Animated.timing(translateX, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(translateX, {
-        toValue: -width * 0.75,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
+    Animated.timing(translateX, {
+      toValue: visible ? 0 : -width * 0.75,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
   }, [visible, translateX]);
 
-  // Điều hướng khi chọn item
   const handleNavigate = (screen) => {
     toggleSidebar();
     navigation.navigate(screen);
@@ -54,15 +43,14 @@ const Sidebar = ({ navigation, toggleSidebar, visible }) => {
 
   return (
     <View style={styles.container}>
-      {/* Overlay khi sidebar mở */}
       {visible && <Pressable style={styles.overlay} onPress={toggleSidebar} />}
 
-      {/* Sidebar */}
       <Animated.View style={[styles.sidebar, { transform: [{ translateX }] }]}>
+        {/* Header */}
         <View style={styles.row_logo}>
           <View>
             <Text style={styles.text_profile}>
-              Chào <Text>{name ? name : "Bạn "}!</Text>
+              Chào <Text>{name || "Bạn "}!</Text>
             </Text>
             <Text style={styles.text_hello}>Hôm nay bạn thế nào ?</Text>
           </View>
@@ -71,26 +59,18 @@ const Sidebar = ({ navigation, toggleSidebar, visible }) => {
             style={styles.logo}
           />
         </View>
-        
-        <TouchableOpacity
-          onPress={() => handleNavigate("Cart")}
-          style={styles.menuItem}
-        >
-          <Text style={styles.menuText}>Giỏ hàng</Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => handleNavigate("Medicines")}
-          style={styles.menuItem}
-        >
-          <Text style={styles.menuText}>Mua thuốc</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => handleNavigate("Articles")}
-          style={styles.menuItem}
-        >
-          <Text style={styles.menuText}>Bài viết</Text>
-        </TouchableOpacity>
+        {/* Menu items */}
+        {MENU_ITEMS.map(({ label, screen, icon }) => (
+          <TouchableOpacity
+            key={screen}
+            onPress={() => handleNavigate(screen)}
+            style={styles.menuItem}
+          >
+            <Icon name={icon} size={20 * scaleWidth} color="#006980" style={styles.menuIcon} />
+            <Text style={styles.menuText}>{label}</Text>
+          </TouchableOpacity>
+        ))}
       </Animated.View>
     </View>
   );
@@ -99,52 +79,30 @@ const Sidebar = ({ navigation, toggleSidebar, visible }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    position: "absolute", // Đặt Sidebar lên toàn bộ màn hình
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10, // Đảm bảo Sidebar nằm trên các thành phần khác
+    position: "absolute",
+    top: 0, left: 0, right: 0, bottom: 0,
+    zIndex: 10,
   },
   overlay: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    zIndex: 5, // Đặt overlay đè lên nội dung phía sau
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    zIndex: 5,
   },
   sidebar: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: width * 0.8, // 3/4 màn hình
-    height: height, // Chiều cao toàn màn hình
+    top: 0, left: 0, bottom: 0,
+    width: width * 0.8,
+    height: height,
     backgroundColor: "#fff",
     zIndex: 10,
     padding: 20 * scaleWidth,
-  },
-  sidebarTitle: {
-    fontSize: 22 * scaleWidth,
-    fontWeight: "bold",
-    marginBottom: 20 * scaleHeight,
-  },
-  menuItem: {
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: "#ddd",
-    marginBottom: 10,
-  },
-  menuText: {
-    fontSize: 16 * scaleWidth,
-    color: "#333",
   },
   row_logo: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 10 * scaleHeight,
   },
   logo: {
     width: 60 * scaleWidth,
@@ -158,6 +116,20 @@ const styles = StyleSheet.create({
   text_hello: {
     fontSize: 16 * scaleWidth,
     color: "#4CD20A",
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  menuIcon: {
+    marginRight: 12 * scaleWidth,
+  },
+  menuText: {
+    fontSize: 16 * scaleWidth,
+    color: "#333",
   },
 });
 

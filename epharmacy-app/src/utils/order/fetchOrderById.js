@@ -16,7 +16,7 @@ const fetchOrderById = async (id, status, setOrder) => {
       throw new Error(errData.message || "Something went wrong");
     }
     const data = await res.json();
-    setOrder(data.data.carts);
+    setOrder(data.data.orders ?? []);
   } catch (error) {
     console.log("Error fetching fetchOrderById ", error.message || error);
   }

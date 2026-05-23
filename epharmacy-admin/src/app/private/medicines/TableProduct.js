@@ -9,6 +9,7 @@ import {
   useUpdateProductMutation, useDeleteProductMutation,
 } from "@/stores/slices/api/product.slice.api";
 import { useGetAllCategoryMedicineQuery } from "@/stores/slices/api/category-medicine.slice.api";
+import { useGetAllBrandsQuery } from "@/stores/slices/api/brand.slice.api"; // 👈 thêm
 import {
   Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
   Tooltip, Pagination,
@@ -39,11 +40,15 @@ function TableProduct() {
   const [errors, setErrors] = useState({});
   const isError = _.some(errors, (value) => value !== null);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+
   const [createProduct, { isLoading: loadingCreate }] = useCreateProductMutation();
   const [updateProduct, { isLoading: loadingUpdate }] = useUpdateProductMutation();
   const [deleteProduct, { isLoading: loadingDelete }] = useDeleteProductMutation();
+
   const { data: medicineCategory, isLoading: isLoadingCategory } =
     useGetAllCategoryMedicineQuery({ page: 1, limit: 100 });
+  const { data: brandData } = useGetAllBrandsQuery({ page: 1, limit: 100 }); // 👈 thêm
+
   const [query, setQuery] = useState(queryInit);
   const { data, isLoading } = useGetAllProductsQuery(query);
 
@@ -76,7 +81,10 @@ function TableProduct() {
     try {
       setLoadingImg(true);
       const dataUpdate = { ...productDetail };
-      delete dataUpdate.created_at; delete dataUpdate.updated_at; delete dataUpdate.categoryMedicine;
+      delete dataUpdate.created_at;
+      delete dataUpdate.updated_at;
+      delete dataUpdate.categoryMedicine;
+      delete dataUpdate.brand;
       if (files?.length) {
         const formData = new FormData();
         files.forEach((file) => formData.append("image", file));
@@ -99,20 +107,39 @@ function TableProduct() {
 
   const validate = (field, value) => {
     const error = {};
-    if (!value) { error[field] = "Không được để trống!"; }
+    if (!value && value !== 0) { error[field] = "Không được để trống!"; }
     else {
       error[field] = null;
-      if (["new_price", "old_price"].includes(field) && !/^[0-9]*$/.test(value)) {
+      if (["new_price", "old_price", "stock"].includes(field) && !/^[0-9]*$/.test(value)) {
         error[field] = "Vui lòng nhập số!";
       }
     }
     setErrors({ ...errors, ...error });
   };
 
-  const handleChangeProduct = (field, value) => { validate(field, value); setProductDetail({ ...productDetail, [field]: value }); };
-  const handleOpenDetail = (product, type) => { setProductDetail({ ...product }); setProductClone({ ...product }); setTypeAction(type); setErrors({}); onOpen(); };
-  const handleOpenModalAddNew = (type) => { setTypeAction(type); setErrors({}); setProductDetail({}); onOpen(); };
-  const handleOpenModalDelete = (product, type) => { setProductDelete(product); setTypeAction(type); setErrors({}); onOpen(); };
+  const handleChangeProduct = (field, value) => {
+    validate(field, value);
+    setProductDetail({ ...productDetail, [field]: value });
+  };
+  const handleOpenDetail = (product, type) => {
+    setProductDetail({ ...product });
+    setProductClone({ ...product });
+    setTypeAction(type);
+    setErrors({});
+    onOpen();
+  };
+  const handleOpenModalAddNew = (type) => {
+    setTypeAction(type);
+    setErrors({});
+    setProductDetail({});
+    onOpen();
+  };
+  const handleOpenModalDelete = (product, type) => {
+    setProductDelete(product);
+    setTypeAction(type);
+    setErrors({});
+    onOpen();
+  };
 
   const columns = [
     { name: "ẢNH", uid: "image" },
@@ -120,103 +147,333 @@ function TableProduct() {
     { name: "DANH MỤC", uid: "category" },
     { name: "GIÁ GỐC", uid: "old_price" },
     { name: "GIÁ BÁN", uid: "new_price" },
+    { name: "TỒN KHO", uid: "stock" },
     { name: "THAO TÁC", uid: "actions" },
   ];
 
   const renderCell = useCallback((product, columnKey) => {
     switch (columnKey) {
       case "image":
-  return (
-    <div className="w-img-product h-img-product relative overflow-hidden rounded-product border border-default-100 bg-white flex items-center justify-center">
-      <img 
-        src={product.image || "https://via.placeholder.com/80"} 
-        alt={product.name} 
-        className="w-full h-full object-contain p-1" // Dùng object-contain để không mất góc hộp thuốc
-        onError={(e) => { e.target.src = "https://via.placeholder.com/80"; }} 
-      />
-    </div>
-  );
+        return (
+          <div className="w-img-product h-img-product relative overflow-hidden rounded-product border border-default-100 bg-white flex items-center justify-center">
+            <img
+              src={product.image || "https://via.placeholder.com/80"}
+              alt={product.name}
+              className="w-full h-full object-contain p-1"
+              onError={(e) => { e.target.src = "https://via.placeholder.com/80"; }}
+            />
+          </div>
+        );
       case "name":
-        return <div className="flex flex-col max-w-xs"><p className="font-semibold text-sm">{product.name}</p><p className="text-xs text-gray-400">{product.description?.substring(0, 50)}...</p></div>;
+        return (
+          <div className="flex flex-col max-w-xs">
+            <p className="font-semibold text-sm">{product.name}</p>
+            <p className="text-xs text-gray-400">{product.description?.substring(0, 50)}...</p>
+          </div>
+        );
       case "category":
         return <Chip size="sm" variant="flat" color="primary">{product.categoryMedicine?.name || "—"}</Chip>;
       case "old_price":
         return <p className="text-sm line-through text-gray-400">{formatVND(product.old_price)}</p>;
       case "new_price":
         return <p className="text-sm font-bold text-green-500">{formatVND(product.new_price)}</p>;
+      case "stock":
+        return (
+          <Chip
+            size="sm"
+            variant="flat"
+            color={product.stock > 10 ? "success" : product.stock > 0 ? "warning" : "danger"}
+          >
+            {product.stock ?? 0}
+          </Chip>
+        );
       case "actions":
         return (
           <div className="flex items-center justify-center gap-3">
-            <Tooltip content="Chi tiết"><span className="text-lg cursor-pointer text-blue-400 hover:text-blue-600"><FaRegEye onClick={() => handleOpenDetail(product, "view")} /></span></Tooltip>
-            <Tooltip content="Chỉnh sửa"><span className="text-lg cursor-pointer text-yellow-400 hover:text-yellow-600"><FaEdit onClick={() => handleOpenDetail(product, "edit")} /></span></Tooltip>
-            <Tooltip color="danger" content="Xóa"><span className="text-lg cursor-pointer text-red-400 hover:text-red-600"><MdDelete onClick={() => handleOpenModalDelete(product, "delete")} /></span></Tooltip>
+            <Tooltip content="Chi tiết">
+              <span className="text-lg cursor-pointer text-blue-400 hover:text-blue-600">
+                <FaRegEye onClick={() => handleOpenDetail(product, "view")} />
+              </span>
+            </Tooltip>
+            <Tooltip content="Chỉnh sửa">
+              <span className="text-lg cursor-pointer text-yellow-400 hover:text-yellow-600">
+                <FaEdit onClick={() => handleOpenDetail(product, "edit")} />
+              </span>
+            </Tooltip>
+            <Tooltip color="danger" content="Xóa">
+              <span className="text-lg cursor-pointer text-red-400 hover:text-red-600">
+                <MdDelete onClick={() => handleOpenModalDelete(product, "delete")} />
+              </span>
+            </Tooltip>
           </div>
         );
       default: return product[columnKey];
     }
   }, []);
 
-  if (isLoading || isLoadingCategory) return <div className="flex justify-center p-10 text-gray-400">Đang tải...</div>;
+  if (isLoading || isLoadingCategory) return (
+    <div className="flex justify-center p-10 text-gray-400">Đang tải...</div>
+  );
 
   const rowsPerPage = query.limit;
   const pages = Math.ceil((data?.data?.count || 0) / rowsPerPage) || 1;
   const allProducts = data?.data?.medicines || [];
-  const categoryMedicine = medicineCategory?.data?.categoryMedicine?.map((item) => ({ key: String(item.id), label: item.name })) || [];
+  const categoryMedicine = medicineCategory?.data?.categoryMedicine?.map((item) => ({
+    key: String(item.id), label: item.name,
+  })) || [];
+  const brands = brandData?.data?.brands?.map((item) => ({  // 👈 thêm
+    key: String(item.id), label: item.name,
+  })) || [];
 
   const getBodyModal = () => {
     switch (typeAction) {
       case "view":
         return (
           <div className="flex gap-6">
-            <img src={productDetail?.image || "https://via.placeholder.com/200"} alt={productDetail?.name} className="w-48 h-48 object-cover rounded-xl flex-shrink-0" onError={(e) => { e.target.src = "https://via.placeholder.com/200"; }} />
+            <img
+              src={productDetail?.image || "https://via.placeholder.com/200"}
+              alt={productDetail?.name}
+              className="w-48 h-48 object-cover rounded-xl flex-shrink-0"
+              onError={(e) => { e.target.src = "https://via.placeholder.com/200"; }}
+            />
             <div className="flex flex-col gap-3 flex-1">
               <div><p className="text-xs text-gray-400">Tên thuốc</p><p className="font-bold text-lg">{productDetail?.name}</p></div>
               <div><p className="text-xs text-gray-400">Danh mục</p><Chip size="sm" variant="flat" color="primary">{productDetail?.categoryMedicine?.name || "—"}</Chip></div>
+              <div><p className="text-xs text-gray-400">Thương hiệu</p><p className="text-sm">{productDetail?.brand?.name || "—"}</p></div>
+              <div><p className="text-xs text-gray-400">Quy cách đóng gói</p><p className="text-sm">{productDetail?.packaging || "—"}</p></div>
               <div><p className="text-xs text-gray-400">Mô tả</p><p className="text-sm">{productDetail?.description}</p></div>
               <div className="flex gap-4">
                 <div><p className="text-xs text-gray-400">Giá gốc</p><p className="line-through text-gray-400">{formatVND(productDetail?.old_price)}</p></div>
                 <div><p className="text-xs text-gray-400">Giá bán</p><p className="font-bold text-green-500">{formatVND(productDetail?.new_price)}</p></div>
+                <div>
+                  <p className="text-xs text-gray-400">Tồn kho</p>
+                  <Chip
+                    size="sm" variant="flat"
+                    color={(productDetail?.stock ?? 0) > 10 ? "success" : (productDetail?.stock ?? 0) > 0 ? "warning" : "danger"}
+                  >
+                    {productDetail?.stock ?? 0} sản phẩm
+                  </Chip>
+                </div>
               </div>
+              {productDetail?.indications && (
+                <div><p className="text-xs text-gray-400">Trường hợp dùng</p><p className="text-sm">{productDetail.indications}</p></div>
+              )}
+              {productDetail?.contraindications && (
+                <div><p className="text-xs text-gray-400">Trường hợp không dùng</p><p className="text-sm text-red-400">{productDetail.contraindications}</p></div>
+              )}
             </div>
           </div>
         );
+
       case "edit":
         return (
           <div className="flex flex-col gap-3">
             <UploadImage info={productDetail?.image} onFiles={setFiles} files={files} />
-            <Input label="Tên thuốc" isInvalid={!!errors?.name} errorMessage={errors?.name} value={productDetail?.name || ""} onChange={(e) => handleChangeProduct("name", e.target.value)} />
-            <Select items={categoryMedicine} label="Danh mục thuốc" defaultSelectedKeys={productDetail?.category_medicine_id ? [String(productDetail.category_medicine_id)] : []} onChange={(e) => handleChangeProduct("category_medicine_id", e.target.value)}>
-              {(category) => <SelectItem key={category.key}>{category.label}</SelectItem>}
-            </Select>
-            <Textarea label="Mô tả" isInvalid={!!errors?.description} errorMessage={errors?.description} value={productDetail?.description || ""} onChange={(e) => handleChangeProduct("description", e.target.value)} />
+
+            <Input
+              label="Tên thuốc"
+              isRequired
+              isInvalid={!!errors?.name}
+              errorMessage={errors?.name}
+              value={productDetail?.name || ""}
+              onChange={(e) => handleChangeProduct("name", e.target.value)}
+            />
+
             <div className="flex gap-3">
-              <Input label="Giá gốc (đ)" value={String(productDetail?.old_price || "")} isInvalid={!!errors?.old_price} errorMessage={errors?.old_price} onChange={(e) => handleChangeProduct("old_price", e.target.value)} />
-              <Input label="Giá bán (đ)" isInvalid={!!errors?.new_price} errorMessage={errors?.new_price} value={String(productDetail?.new_price || "")} onChange={(e) => handleChangeProduct("new_price", e.target.value)} />
+              <Select
+                items={categoryMedicine}
+                label="Danh mục thuốc"
+                isRequired
+                className="flex-1"
+                defaultSelectedKeys={
+                  productDetail?.category_medicine_id
+                    ? [String(productDetail.category_medicine_id)]
+                    : []
+                }
+                onChange={(e) => handleChangeProduct("category_medicine_id", e.target.value)}
+              >
+                {(cat) => <SelectItem key={cat.key}>{cat.label}</SelectItem>}
+              </Select>
+
+              <Select
+                items={brands}
+                label="Thương hiệu"
+                className="flex-1"
+                defaultSelectedKeys={
+                  productDetail?.brand_id
+                    ? [String(productDetail.brand_id)]
+                    : []
+                }
+                onChange={(e) => handleChangeProduct("brand_id", e.target.value)}
+              >
+                {(brand) => <SelectItem key={brand.key}>{brand.label}</SelectItem>}
+              </Select>
             </div>
+
+            <Input
+              label="Quy cách đóng gói"
+              placeholder="Ví dụ: Hộp 10 miếng, Vỉ 5 viên..."
+              value={productDetail?.packaging || ""}
+              onChange={(e) => handleChangeProduct("packaging", e.target.value)}
+            />
+
+            <Textarea
+              label="Mô tả"
+              isRequired
+              isInvalid={!!errors?.description}
+              errorMessage={errors?.description}
+              value={productDetail?.description || ""}
+              onChange={(e) => handleChangeProduct("description", e.target.value)}
+            />
+
+            <div className="flex gap-3">
+              <Input
+                label="Giá gốc (đ)"
+                isRequired
+                value={String(productDetail?.old_price || "")}
+                isInvalid={!!errors?.old_price}
+                errorMessage={errors?.old_price}
+                onChange={(e) => handleChangeProduct("old_price", e.target.value)}
+              />
+              <Input
+                label="Giá bán (đ)"
+                isRequired
+                isInvalid={!!errors?.new_price}
+                errorMessage={errors?.new_price}
+                value={String(productDetail?.new_price || "")}
+                onChange={(e) => handleChangeProduct("new_price", e.target.value)}
+              />
+              <Input
+                label="Tồn kho"
+                type="number"
+                min={0}
+                isInvalid={!!errors?.stock}
+                errorMessage={errors?.stock}
+                value={String(productDetail?.stock ?? "")}
+                onChange={(e) => handleChangeProduct("stock", e.target.value)}
+              />
+            </div>
+
+            <Textarea
+              label="Trường hợp dùng"
+              placeholder="Mô tả các trường hợp nên sử dụng sản phẩm..."
+              value={productDetail?.indications || ""}
+              onChange={(e) => handleChangeProduct("indications", e.target.value)}
+            />
+
+            <Textarea
+              label="Trường hợp không dùng"
+              placeholder="Mô tả chống chỉ định hoặc trường hợp cần tránh..."
+              value={productDetail?.contraindications || ""}
+              onChange={(e) => handleChangeProduct("contraindications", e.target.value)}
+            />
           </div>
         );
+
       case "create":
         return (
           <div className="flex flex-col gap-3">
             <UploadImage info={null} onFiles={setFiles} files={files} />
-            <Input label="Tên thuốc" isInvalid={!!errors?.name} errorMessage={errors?.name} value={productDetail?.name || ""} onChange={(e) => handleChangeProduct("name", e.target.value)} />
-            <Select items={categoryMedicine} label="Danh mục thuốc" onChange={(e) => handleChangeProduct("category_medicine_id", e.target.value)}>
-              {(category) => <SelectItem key={category.key}>{category.label}</SelectItem>}
-            </Select>
-            <Textarea label="Mô tả" isInvalid={!!errors?.description} errorMessage={errors?.description} value={productDetail?.description || ""} onChange={(e) => handleChangeProduct("description", e.target.value)} />
+
+            <Input
+              label="Tên thuốc"
+              isRequired
+              isInvalid={!!errors?.name}
+              errorMessage={errors?.name}
+              value={productDetail?.name || ""}
+              onChange={(e) => handleChangeProduct("name", e.target.value)}
+            />
+
             <div className="flex gap-3">
-              <Input label="Giá gốc (đ)" value={productDetail?.old_price || ""} isInvalid={!!errors?.old_price} errorMessage={errors?.old_price} onChange={(e) => handleChangeProduct("old_price", e.target.value)} />
-              <Input label="Giá bán (đ)" isInvalid={!!errors?.new_price} errorMessage={errors?.new_price} value={productDetail?.new_price || ""} onChange={(e) => handleChangeProduct("new_price", e.target.value)} />
+              <Select
+                items={categoryMedicine}
+                label="Danh mục thuốc"
+                isRequired
+                className="flex-1"
+                onChange={(e) => handleChangeProduct("category_medicine_id", e.target.value)}
+              >
+                {(cat) => <SelectItem key={cat.key}>{cat.label}</SelectItem>}
+              </Select>
+
+              <Select
+                items={brands}
+                label="Thương hiệu"
+                className="flex-1"
+                onChange={(e) => handleChangeProduct("brand_id", e.target.value)}
+              >
+                {(brand) => <SelectItem key={brand.key}>{brand.label}</SelectItem>}
+              </Select>
             </div>
+
+            <Input
+              label="Quy cách đóng gói"
+              placeholder="Ví dụ: Hộp 10 miếng, Vỉ 5 viên..."
+              value={productDetail?.packaging || ""}
+              onChange={(e) => handleChangeProduct("packaging", e.target.value)}
+            />
+
+            <Textarea
+              label="Mô tả"
+              isRequired
+              isInvalid={!!errors?.description}
+              errorMessage={errors?.description}
+              value={productDetail?.description || ""}
+              onChange={(e) => handleChangeProduct("description", e.target.value)}
+            />
+
+            <div className="flex gap-3">
+              <Input
+                label="Giá gốc (đ)"
+                isRequired
+                value={productDetail?.old_price || ""}
+                isInvalid={!!errors?.old_price}
+                errorMessage={errors?.old_price}
+                onChange={(e) => handleChangeProduct("old_price", e.target.value)}
+              />
+              <Input
+                label="Giá bán (đ)"
+                isRequired
+                isInvalid={!!errors?.new_price}
+                errorMessage={errors?.new_price}
+                value={productDetail?.new_price || ""}
+                onChange={(e) => handleChangeProduct("new_price", e.target.value)}
+              />
+              <Input
+                label="Tồn kho"
+                type="number"
+                min={0}
+                isInvalid={!!errors?.stock}
+                errorMessage={errors?.stock}
+                value={String(productDetail?.stock ?? "")}
+                onChange={(e) => handleChangeProduct("stock", e.target.value)}
+              />
+            </div>
+
+            <Textarea
+              label="Trường hợp dùng"
+              placeholder="Mô tả các trường hợp nên sử dụng sản phẩm..."
+              value={productDetail?.indications || ""}
+              onChange={(e) => handleChangeProduct("indications", e.target.value)}
+            />
+
+            <Textarea
+              label="Trường hợp không dùng"
+              placeholder="Mô tả chống chỉ định hoặc trường hợp cần tránh..."
+              value={productDetail?.contraindications || ""}
+              onChange={(e) => handleChangeProduct("contraindications", e.target.value)}
+            />
           </div>
         );
+
       case "delete":
         return (
           <div className="flex items-center gap-3 p-2">
             <IoWarningOutline className="text-yellow-500 text-3xl flex-shrink-0" />
-            <div><p className="font-semibold">Bạn có chắc muốn xóa sản phẩm này?</p><p className="text-sm text-gray-400">{productDelete?.name}</p></div>
+            <div>
+              <p className="font-semibold">Bạn có chắc muốn xóa sản phẩm này?</p>
+              <p className="text-sm text-gray-400">{productDelete?.name}</p>
+            </div>
           </div>
-          
         );
       default: return null;
     }
@@ -224,8 +481,8 @@ function TableProduct() {
 
   const getTitleModal = () => {
     switch (typeAction) {
-      case "view": return "Chi tiết sản phẩm";
-      case "edit": return "Chỉnh sửa sản phẩm";
+      case "view":   return "Chi tiết sản phẩm";
+      case "edit":   return "Chỉnh sửa sản phẩm";
       case "create": return "Tạo mới sản phẩm";
       case "delete": return <div className="flex items-center gap-2"><IoWarningOutline className="text-yellow-500" /> Xác nhận xóa</div>;
       default: return "";
@@ -235,10 +492,22 @@ function TableProduct() {
   return (
     <>
       <div className="flex gap-3 mb-4">
-        <Button color="primary" onClick={() => handleOpenModalAddNew("create")} startContent={<IoMdAddCircleOutline fontSize="1.2rem" />}>Tạo mới</Button>
+        <Button color="primary" onClick={() => handleOpenModalAddNew("create")} startContent={<IoMdAddCircleOutline fontSize="1.2rem" />}>
+          Tạo mới
+        </Button>
         <CategoryProduct />
       </div>
-      <Table aria-label="Danh sách thuốc" bottomContent={pages > 1 ? <div className="flex justify-center w-full"><Pagination isCompact showControls showShadow color="primary" page={query.page} total={pages} onChange={(page) => setQuery({ ...query, page })} /></div> : null}>
+
+      <Table
+        aria-label="Danh sách thuốc"
+        bottomContent={
+          pages > 1 ? (
+            <div className="flex justify-center w-full">
+              <Pagination isCompact showControls showShadow color="primary" page={query.page} total={pages} onChange={(page) => setQuery({ ...query, page })} />
+            </div>
+          ) : null
+        }
+      >
         <TableHeader columns={columns}>
           {(column) => <TableColumn key={column.uid} align={column.uid === "actions" ? "center" : "start"}>{column.name}</TableColumn>}
         </TableHeader>
@@ -246,7 +515,13 @@ function TableProduct() {
           {(item) => <TableRow key={item.id}>{(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}</TableRow>}
         </TableBody>
       </Table>
-      <Modal size={typeAction === "delete" ? "md" : "2xl"} isOpen={isOpen} onOpenChange={() => { onOpenChange(); setFiles([]); }} scrollBehavior="inside">
+
+      <Modal
+        size={typeAction === "delete" ? "md" : "2xl"}
+        isOpen={isOpen}
+        onOpenChange={() => { onOpenChange(); setFiles([]); }}
+        scrollBehavior="inside"
+      >
         <ModalContent>
           {(onClose) => (
             <>
@@ -254,9 +529,21 @@ function TableProduct() {
               <ModalBody>{getBodyModal()}</ModalBody>
               <ModalFooter>
                 <Button color="danger" variant="light" onPress={() => { setFiles([]); onClose(); }}>Đóng</Button>
-                {typeAction === "edit" && <Button color="primary" isLoading={loadingImg || loadingUpdate} onPress={() => handleUpdateProduct(onClose)} isDisabled={isChange && !files.length}>Lưu thay đổi</Button>}
-                {typeAction === "create" && <Button color="primary" onPress={() => handleSave(onClose)} isLoading={loadingImg || loadingCreate} isDisabled={!handleCheckCreate()}>Tạo mới</Button>}
-                {typeAction === "delete" && <Button color="danger" isLoading={loadingDelete} onPress={() => handleDeleteProduct(onClose)}>Xác nhận xóa</Button>}
+                {typeAction === "edit" && (
+                  <Button color="primary" isLoading={loadingImg || loadingUpdate} onPress={() => handleUpdateProduct(onClose)} isDisabled={isChange && !files.length}>
+                    Lưu thay đổi
+                  </Button>
+                )}
+                {typeAction === "create" && (
+                  <Button color="primary" onPress={() => handleSave(onClose)} isLoading={loadingImg || loadingCreate} isDisabled={!handleCheckCreate()}>
+                    Tạo mới
+                  </Button>
+                )}
+                {typeAction === "delete" && (
+                  <Button color="danger" isLoading={loadingDelete} onPress={() => handleDeleteProduct(onClose)}>
+                    Xác nhận xóa
+                  </Button>
+                )}
               </ModalFooter>
             </>
           )}
@@ -265,4 +552,5 @@ function TableProduct() {
     </>
   );
 }
+
 export default TableProduct;

@@ -22,16 +22,21 @@ const CartScreen = () => {
   const navigation = useNavigation();
 
   const increaseQuantity = async (id) => {
-    const quantity = items.find((item) => item.id === id).quantity;
-    await updateQuantity(id, quantity + 1);
-    setItems((prevItems) =>
-      prevItems.map((item) =>
-        item.id === id ? { ...item, quantity: item.quantity + 1 } : item
-      )
-    );
-  };
+    try {
+      const quantity = items.find((item) => item.id === id).quantity;
+      await updateQuantity(id, quantity + 1);
+      setItems((prevItems) =>
+        prevItems.map((item) =>
+          item.id === id ? { ...item, quantity: item.quantity + 1 } : item
+        )
+      );
+    } catch (error) {
+      Alert.alert("Thông báo", error.message || "Không thể tăng số lượng ")
+    }
+    };
 
   const decreaseQuantity = async (id) => {
+    try {
     const quantity = items.find((item) => item.id === id).quantity;
     await updateQuantity(id, quantity - 1);
     setItems((prevItems) =>
@@ -41,6 +46,9 @@ const CartScreen = () => {
           : item
       )
     );
+  } catch (error) {
+    Alert.alert("Thông báo", error.message || "Không thể giảm số lượng")
+  }
   };
 
   const deleteItem = async (id) => {

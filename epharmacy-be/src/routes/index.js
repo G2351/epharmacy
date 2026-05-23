@@ -14,5 +14,6 @@ router.use("/v1/api", require("./map"));
 router.use("/v1/api", require("./voucher"));
 router.use("/v1/api", require("./branch"));
 router.use("/payments", require("./payment"));
+router.use("/v1/api", require("./brand"));
 
 module.exports = router;

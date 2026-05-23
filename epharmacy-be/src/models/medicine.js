@@ -13,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "category_medicine_id",
         as: "categoryMedicine",
       });
+      Medicine.belongsTo(models.Brand,{
+        foreignKey: "brand_id",
+        as: "brand",
+      });
     }
   }
   Medicine.init(
@@ -23,12 +27,20 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
       },
       category_medicine_id: DataTypes.INTEGER,
+      brand_id: DataTypes.INTEGER,
       name: DataTypes.STRING,
       old_price: DataTypes.FLOAT,
       new_price: DataTypes.FLOAT,
       description: DataTypes.STRING,
       image: DataTypes.STRING,
       rate: DataTypes.FLOAT,
+      stock: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0 
+       },
+      packaging: DataTypes.STRING,
+      indications: DataTypes.TEXT,
+      contraindications: DataTypes.TEXT,
     },
     {
       sequelize,

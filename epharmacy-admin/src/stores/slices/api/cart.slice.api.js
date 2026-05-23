@@ -23,6 +23,17 @@ export const cartSliceApi = createApi({
       }),
       providesTags: () => [{ type: "Orders", id: "STATS" }],
     }),
+    updateOrderStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: `${ORDER}/${id}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: () => [
+        { type: "Orders", id: "LIST" },
+        { type: "Orders", id: "STATS" },
+      ],
+    }),
     deleteOrder: builder.mutation({
       query: (id) => ({
         url: `${ORDER}/${id}`,
@@ -50,6 +61,7 @@ export const cartApiMiddleware = cartSliceApi.middleware;
 export const {
   useGetAllOrdersQuery,
   useGetStatisticsQuery,
+  useUpdateOrderStatusMutation,
   useDeleteOrderMutation,
   useUpdateOrderMutation,
 } = cartSliceApi;

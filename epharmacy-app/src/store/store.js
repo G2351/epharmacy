@@ -8,6 +8,7 @@ export const store = configureStore({
   reducer: {
     profile: profileReducer,
     countOrder: countOrderReducer,
+
   },
 });
 // store.dispatch(loadInitialProfile());

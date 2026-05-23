@@ -2,49 +2,45 @@
 import React, { useCallback, useState } from "react";
 import {
   Modal, ModalContent, ModalHeader, ModalBody, ModalFooter,
-  Button, useDisclosure, User, Chip,
+  Button, useDisclosure, Chip,
 } from "@nextui-org/react";
 import {
-  useGetAllOrdersQuery, useDeleteOrderMutation, useUpdateOrderMutation,
+  useGetAllOrdersQuery, useUpdateOrderStatusMutation,
 } from "@/stores/slices/api/cart.slice.api";
 import {
   Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
   Tooltip, Pagination,
 } from "@nextui-org/react";
 import { FaRegEye } from "react-icons/fa6";
-import { MdDelete, MdOutlineDownloadDone } from "react-icons/md";
-import Image from "next/image";
-import { IoWarningOutline } from "react-icons/io5";
+import { MdOutlineDownloadDone } from "react-icons/md";
 import { toast } from "sonner";
 
-export const SERVER_URL = process.env.SERVER_URL;
+const formatVND = (v) => Number(v).toLocaleString("vi-VN") + " đ";
+
+const STATUS_LABELS = {
+  pending: "Chờ xử lý",
+  processing: "Đang xử lý",
+  done: "Hoàn thành",
+  cancelled: "Đã hủy",
+};
+
+const statusColorMap = {
+  done: "success",
+  pending: "warning",
+  processing: "primary",
+  cancelled: "danger",
+};
 
 function TableCart() {
-  const queryInit = { page: 1, limit: 2 };
+  const queryInit = { page: 1, limit: 10 };
   const [orderDetail, setOrderDetail] = useState(null);
-  const [orderDelete, setOrderDelete] = useState(null);
-  const [orderDone, setOrderDone] = useState(null);
+  const [orderUpdate, setOrderUpdate] = useState(null);
   const [typeAction, setTypeAction] = useState(null);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const [deleteOrder, { isLoading: loadingDelete }] = useDeleteOrderMutation();
-  const [updateOrder, { isLoading: loadingUpdate }] = useUpdateOrderMutation();
-
-  const statusColorMap = {
-    done: "success",
-    pending: "warning",
-    confirm: "danger",
-  };
+  const [updateOrderStatus, { isLoading: loadingUpdate }] = useUpdateOrderStatusMutation();
 
   const [query, setQuery] = useState(queryInit);
   const { data, isLoading } = useGetAllOrdersQuery(query);
-
-  const handleDeleteArticle = async (onClose) => {
-    const resDelete = await deleteOrder(orderDelete.id).unwrap();
-    if (resDelete.status === 200) {
-      toast.success("Delete article success!");
-      onClose();
-    }
-  };
 
   const handleOpenDetail = (order, type) => {
     setOrderDetail(order);
@@ -52,164 +48,153 @@ function TableCart() {
     onOpen();
   };
 
-  const handleOpenModalDelete = (order, type) => {
-    setOrderDelete(order);
-    setTypeAction(type);
-    onOpen();
-  };
-
   const handleOpenConfirm = (order, type) => {
     setTypeAction(type);
-    setOrderDone(order);
+    setOrderUpdate(order);
     onOpen();
   };
 
-  function checkAndPrint(text) {
-    if (text.length > 64) return text.substring(0, 64) + "...";
-    return text;
-  }
-
   const renderCell = useCallback((order, columnKey) => {
-    const cellValue = order[columnKey];
     switch (columnKey) {
-      case "name":
+      case "order_code":
+        return <div className="text-sm font-semibold">{order.order_code}</div>;
+      case "customer":
         return (
-          <User avatarProps={{ radius: "lg", src: order.image }} name={cellValue}>
-            {order.name}
-          </User>
+          <div className="text-sm">
+            <p className="font-medium">{order.recipient_name || order.user?.name}</p>
+            <p className="text-gray-400 text-xs">{order.user?.email}</p>
+          </div>
         );
-      case "description":
-        return <div className="text-sm capitalize">{checkAndPrint(cellValue)}</div>;
-      case "quantity":
-        return <div className="text-sm">{cellValue}</div>;
-      case "new_price":
-        return <div className="text-sm">{cellValue}</div>;
-      case "total":
-        return <div className="text-sm">{order.quantity * +order.new_price}</div>;
+      case "items_count":
+        return <div className="text-sm">{order.items?.length || 0} SP</div>;
+      case "total_amount":
+        return <div className="text-sm font-semibold text-green-500">{formatVND(order.total_amount)}</div>;
+      case "created_at":
+        return (
+          <div className="text-sm text-gray-400">
+            {new Date(order.created_at).toLocaleDateString("vi-VN", {
+              day: "2-digit", month: "2-digit", year: "numeric",
+              hour: "2-digit", minute: "2-digit",
+            })}
+          </div>
+        );
       case "status":
         return (
           <Chip className="capitalize" color={statusColorMap[order.status]} size="sm" variant="flat">
-            {cellValue}
+            {STATUS_LABELS[order.status] || order.status}
           </Chip>
         );
       case "actions":
         return (
-          <div className="relative flex items-end justify-center gap-2">
-            <Tooltip content="Details">
+          <div className="relative flex items-center justify-center gap-2">
+            <Tooltip content="Chi tiết">
               <span className="text-lg cursor-pointer text-default-400 active:opacity-50">
                 <FaRegEye onClick={() => handleOpenDetail(order, "view")} />
               </span>
             </Tooltip>
-            {order.status !== "done" && (
-              <Tooltip content="Mark as done">
+            {order.status !== "done" && order.status !== "cancelled" && (
+              <Tooltip content="Hoàn thành đơn">
                 <span className="text-lg cursor-pointer text-default-400 active:opacity-50">
                   <MdOutlineDownloadDone onClick={() => handleOpenConfirm(order, "markDone")} />
                 </span>
               </Tooltip>
             )}
-            <Tooltip color="danger" content="Delete">
-              <span className="text-lg cursor-pointer text-danger active:opacity-50">
-                <MdDelete onClick={() => handleOpenModalDelete(order, "delete")} />
-              </span>
-            </Tooltip>
           </div>
         );
       default:
-        return cellValue;
+        return order[columnKey];
     }
   }, []);
 
   const columns = [
-    { name: "NAME", uid: "name" },
-    { name: "DESCRIPTION", uid: "description" },
-    { name: "QUANTITY", uid: "quantity" },
-    { name: "PRICE", uid: "new_price" },
-    { name: "TOTAL", uid: "total" },
-    { name: "STATUS", uid: "status" },
-    { name: "ACTIONS", uid: "actions" },
+    { name: "MÃ ĐƠN", uid: "order_code" },
+    { name: "KHÁCH HÀNG", uid: "customer" },
+    { name: "SẢN PHẨM", uid: "items_count" },
+    { name: "TỔNG TIỀN", uid: "total_amount" },
+    { name: "NGÀY ĐẶT", uid: "created_at" },
+    { name: "TRẠNG THÁI", uid: "status" },
+    { name: "THAO TÁC", uid: "actions" },
   ];
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <div className="p-6 text-center text-gray-400">Đang tải...</div>;
 
   const rowsPerPage = query.limit;
   const pages = Math.ceil((data?.data?.count || 0) / rowsPerPage) || 1;
-  const allOrders = data?.data?.carts || [];
+  const allOrders = data?.data?.orders || [];
 
   const handleChangePagination = (page) => setQuery({ ...query, page });
-  const handleCloseModal = (onClose) => onClose();
-  const handleOpenChangeModal = () => onOpenChange();
 
   const handleMarkAsDone = async (onClose) => {
-    const resUpdate = await updateOrder({
-      idOrder: orderDone.id,
-      payload: { status: "done" },
+    const resUpdate = await updateOrderStatus({
+      id: orderUpdate.id,
+      status: "done",
     }).unwrap();
     if (resUpdate.status === 200) {
-      toast.success("Cập nhật thành công!");
+      toast.success("Cập nhật đơn hàng thành công!");
       onClose();
     }
   };
 
   const getBodyModal = () => {
-    switch (typeAction) {
-      case "view":
-        return (
-          <div className="flex flex-col gap-2">
-            <Image
-              width={240}
-              height={240}
-              src={orderDetail?.image}
-              alt={orderDetail?.name}
-              className="m-5"
-            />
-            <div>{orderDetail?.name}</div>
-            <div>{orderDetail?.description}</div>
-            <div>Quantity: {orderDetail?.quantity}</div>
-            <div>Old price: {orderDetail?.old_price}</div>
-            <div>New price: {orderDetail?.new_price}</div>
-            <div>Name: {orderDetail?.user?.name}</div>
-            <div>Email: {orderDetail?.user?.email}</div>
-            <div>Total: {orderDetail?.quantity * +orderDetail?.new_price}</div>
-            <div className="flex items-center gap-2">
-              Trạng thái:{" "}
-              <Chip
-                className="capitalize"
-                color={statusColorMap[orderDetail.status]}
-                size="sm"
-                variant="flat"
-              >
-                {orderDetail.status}
+    if (typeAction === "markDone") {
+      return (
+        <div>
+          Xác nhận hoàn thành đơn <strong>{orderUpdate?.order_code}</strong>?
+        </div>
+      );
+    }
+    if (typeAction === "view" && orderDetail) {
+      return (
+        <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div><span className="text-gray-400">Mã đơn:</span> {orderDetail.order_code}</div>
+            <div>
+              <span className="text-gray-400">Trạng thái:</span>{" "}
+              <Chip color={statusColorMap[orderDetail.status]} size="sm" variant="flat">
+                {STATUS_LABELS[orderDetail.status]}
               </Chip>
             </div>
+            <div><span className="text-gray-400">Khách hàng:</span> {orderDetail.recipient_name}</div>
+            <div><span className="text-gray-400">Email:</span> {orderDetail.email}</div>
+            <div><span className="text-gray-400">SĐT:</span> {orderDetail.phone}</div>
+            <div><span className="text-gray-400">Địa chỉ:</span> {orderDetail.address}</div>
+            {orderDetail.note && (
+              <div className="col-span-2"><span className="text-gray-400">Ghi chú:</span> {orderDetail.note}</div>
+            )}
           </div>
-        );
-      case "markDone":
-        return <div>Xác nhận hoàn thành order?</div>;
-      case "delete":
-        return <div>Bạn có chắc chắn muốn xóa order này không?</div>;
-      default:
-        return null;
-    }
-  };
-
-  const getTitleModal = () => {
-    switch (typeAction) {
-      case "view": return <>Chi tiết order</>;
-      case "markDone": return <>Confirm</>;
-      case "delete":
-        return (
-          <div className="flex items-start gap-2">
-            <IoWarningOutline fontSize={"1.4rem"} /> Xác nhận
+          <div className="border-t border-gray-700 pt-3">
+            <p className="font-semibold mb-2">Sản phẩm ({orderDetail.items?.length || 0})</p>
+            {orderDetail.items?.map((item) => (
+              <div key={item.id} className="flex items-center gap-3 py-2 border-b border-gray-800 last:border-0">
+                <img
+                  src={item.image || "https://via.placeholder.com/40"}
+                  alt={item.name}
+                  className="w-10 h-10 rounded object-contain bg-gray-800"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{item.name}</p>
+                  <p className="text-xs text-gray-400">x{item.quantity} • {formatVND(item.new_price)}</p>
+                </div>
+                <p className="text-sm font-semibold text-green-400">
+                  {formatVND(item.new_price * item.quantity)}
+                </p>
+              </div>
+            ))}
           </div>
-        );
-      default: return null;
+          <div className="flex justify-between font-bold text-base border-t border-gray-700 pt-3">
+            <span>Tổng cộng</span>
+            <span className="text-green-400">{formatVND(orderDetail.total_amount)}</span>
+          </div>
+        </div>
+      );
     }
+    return null;
   };
 
   return (
     <>
       <Table
-        aria-label="Example table with custom cells"
+        aria-label="Bảng lịch sử đơn hàng"
         bottomContent={
           pages > 0 ? (
             <div className="flex justify-center w-full">
@@ -231,7 +216,7 @@ function TableCart() {
             </TableColumn>
           )}
         </TableHeader>
-        <TableBody items={allOrders}>
+        <TableBody items={allOrders} emptyContent="Chưa có đơn hàng nào">
           {(item) => (
             <TableRow key={item.id}>
               {(columnKey) => <TableCell>{renderCell(item, columnKey)}</TableCell>}
@@ -240,29 +225,26 @@ function TableCart() {
         </TableBody>
       </Table>
       <Modal
-        size={typeAction === "delete" || typeAction === "markDone" ? "lg" : "3xl"}
+        size={typeAction === "markDone" ? "md" : "3xl"}
         isOpen={isOpen}
-        onOpenChange={handleOpenChangeModal}
+        onOpenChange={onOpenChange}
         shouldBlockScroll
         scrollBehavior="inside"
       >
         <ModalContent>
           {(onClose) => (
             <>
-              <ModalHeader className="flex flex-col gap-1">{getTitleModal()}</ModalHeader>
+              <ModalHeader>
+                {typeAction === "view" ? "Chi tiết đơn hàng" : "Xác nhận hoàn thành"}
+              </ModalHeader>
               <ModalBody>{getBodyModal()}</ModalBody>
               <ModalFooter>
-                <Button color="danger" variant="light" onPress={() => handleCloseModal(onClose)}>
-                  Close
+                <Button color="danger" variant="light" onPress={onClose}>
+                  Đóng
                 </Button>
-                {typeAction === "delete" && (
-                  <Button color="danger" isLoading={loadingDelete} onPress={() => handleDeleteArticle(onClose)}>
-                    Delete
-                  </Button>
-                )}
                 {typeAction === "markDone" && (
                   <Button color="primary" isLoading={loadingUpdate} onPress={() => handleMarkAsDone(onClose)}>
-                    Mark as Done
+                    Hoàn thành
                   </Button>
                 )}
               </ModalFooter>

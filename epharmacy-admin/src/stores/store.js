@@ -40,6 +40,11 @@ import {
   branchApiMiddleware,
 } from "./slices/api/branch.slice.api";
 import {
+  brandApiReducer,
+  brandApiReducerPath,
+  brandApiMiddleware,
+} from "./slices/api/brand.slice.api";
+import {
   voucherApiReducer,
   voucherApiReducerPath,
   voucherApiMiddleware,
@@ -55,6 +60,7 @@ export const store = configureStore({
     [userApiReducerPath]: userApiReducer,
     [categoryMedicineApiReducerPath]: categoryMedicineApiReducer,
     [branchApiReducerPath]: branchApiReducer,
+    [brandApiReducerPath]: brandApiReducer,
     [voucherApiReducerPath]: voucherApiReducer,
   },
   middleware: (getDefaultMiddleware) =>
@@ -67,5 +73,6 @@ export const store = configureStore({
       .concat(userApiMiddleware)
       .concat(categoryMedicineApiMiddleware)
       .concat(branchApiMiddleware)
+      .concat(brandApiMiddleware)
       .concat(voucherApiMiddleware),
 });

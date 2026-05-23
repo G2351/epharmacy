@@ -1,13 +1,13 @@
 import API_APP from "../config";
 
-const fetchVoucherByCode = async ({ userId, voucherCode }) => {
+const fetchVoucherByCode = async ({ voucherCode }) => {
   try {
     const response = await fetch(`${API_APP}/v1/api/getVoucherByCode`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ userId, voucherCode }),
+      body: JSON.stringify({ voucherCode }),
     });
     const data = await response.json();
     return data;

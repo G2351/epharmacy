@@ -2,6 +2,18 @@ const { SuccessResponse, CREATED } = require("../core/success.response.js");
 const OrderService = require("../services/order.service.js");
 
 class OrderController {
+  static createOrderFromCart = async (req, res) => {
+    new CREATED({
+      message: "Đặt hàng thành công!",
+      data: await OrderService.createOrderFromCart(req.body),
+    }).send(res);
+  };
+  static getOrderHistory = async (req, res) => {
+    new SuccessResponse({
+      message: "Get order history success!",
+      data: await OrderService.getOrderHistory(req.query),
+    }).send(res);
+  };
   static getAllOrders = async (req, res) => {
     new SuccessResponse({
       message: "Get all orders Success!",
@@ -48,6 +60,16 @@ class OrderController {
     new SuccessResponse({
       message: "Check existing medicine Success!",
       data: await OrderService.checkExistingMedicine(req.query),
+    }).send(res);
+  };
+
+  static updateOrderStatus = async (req, res) => {
+    new SuccessResponse({
+      message: "Update order status success!",
+      data: await OrderService.updateOrderStatus({
+        id: req.params.id,
+        status: req.body.status,
+      }),
     }).send(res);
   };
 

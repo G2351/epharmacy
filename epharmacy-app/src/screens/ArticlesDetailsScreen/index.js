@@ -2,7 +2,7 @@ import React from "react";
 import { Text, View, ScrollView, Platform } from "react-native";
 import formatText from "../../utils/formatText";
 import styles from "./style";
-export default function ArtcilesDetailsScreen({ route }) {
+export default function ArticlesDetailsScreen({ route }) {
   const { articles } = route.params;
 
   return (

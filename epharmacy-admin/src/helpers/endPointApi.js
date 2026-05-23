@@ -12,4 +12,6 @@ export const endPointApi = {
   BRANCH: "branch",
   BRANCHES: "branches",
   VOUCHER: "voucher",
+  BRAND: "brands",
+  BRANDS: "brands",
 };

@@ -1,6 +1,5 @@
 "use client";
 import { useGetStatisticsQuery } from "@/stores/slices/api/cart.slice.api";
-import { Card, CardBody } from "@nextui-org/react";
 import { Bar, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement,
@@ -19,8 +18,20 @@ export default function StatsDashboard() {
   const stats = data?.data;
   if (!stats) return <div className="p-10 text-center text-gray-400">Không có dữ liệu</div>;
 
-  const statusMap = { pending: "Chờ xử lý", done: "Hoàn thành", confirm: "Xác nhận" };
-  const colorMap = { pending: "#f59e0b", done: "#10b981", confirm: "#3b82f6" };
+  const statusMap = {
+    pending: "Chờ xử lý",
+    processing: "Đang xử lý",
+    done: "Hoàn thành",
+    cancelled: "Đã hủy",
+  };
+  const colorMap = {
+    pending: "#f59e0b",
+    processing: "#3b82f6",
+    done: "#10b981",
+    cancelled: "#ef4444",
+  };
+
+  const soldProducts = stats.soldProducts || stats.topMedicines || [];
 
   const barData = {
     labels: stats.revenueByMonth.map((item) =>
@@ -93,6 +104,14 @@ export default function StatsDashboard() {
           <p className="text-xs text-blue-400 font-semibold">Tổng doanh thu</p>
           <p className="text-lg font-bold text-blue-300 mt-1">{formatVND(stats.totalRevenue)}</p>
         </div>
+        <div className="bg-[#1a1a2e] border border-gray-700 rounded-xl p-4">
+          <p className="text-xs text-purple-400 font-semibold">Tổng đơn hàng</p>
+          <p className="text-lg font-bold text-white mt-1">{stats.totalOrders ?? 0} đơn</p>
+        </div>
+        <div className="bg-[#1a1a2e] border border-gray-700 rounded-xl p-4">
+          <p className="text-xs text-green-400 font-semibold">Sản phẩm đã bán</p>
+          <p className="text-lg font-bold text-white mt-1">{stats.totalSoldItems ?? 0} SP</p>
+        </div>
         {stats.ordersByStatus.map((s) => (
           <div key={s.status} className="bg-[#1a1a2e] border border-gray-700 rounded-xl p-4">
             <p className="text-xs font-semibold" style={{ color: colorMap[s.status] || "#fff" }}>
@@ -123,12 +142,15 @@ export default function StatsDashboard() {
       </div>
 
       <div className="bg-[#1a1a2e] border border-gray-700 rounded-xl p-4">
-        <p className="font-bold text-lg mb-4 text-white">Top 5 thuốc bán chạy</p>
-        {stats.topMedicines.length === 0 ? (
+        <div className="flex items-center justify-between mb-4">
+          <p className="font-bold text-lg text-white">Tất cả sản phẩm đã bán</p>
+          <span className="text-sm text-gray-400">{soldProducts.length} sản phẩm</span>
+        </div>
+        {soldProducts.length === 0 ? (
           <p className="text-gray-400 text-center py-6">Chưa có dữ liệu</p>
         ) : (
-          <div className="flex flex-col gap-3">
-            {stats.topMedicines.map((item, index) => (
+          <div className="flex flex-col gap-3 max-h-[480px] overflow-y-auto pr-2">
+            {soldProducts.map((item, index) => (
               <div key={item.product_id} className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-full bg-blue-900 flex items-center justify-center text-blue-300 font-bold text-sm flex-shrink-0">
                   {index + 1}
@@ -138,11 +160,13 @@ export default function StatsDashboard() {
                   alt={item.name}
                   className="w-10 h-10 rounded-lg object-contain bg-gray-800 border border-gray-700"
                 />
-                <div className="flex-1">
-                  <p className="font-semibold text-sm text-white">{item.name}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-white truncate">{item.name}</p>
                   <p className="text-xs text-gray-400">Đã bán: {item.totalSold} sản phẩm</p>
                 </div>
-                <p className="font-bold text-sm text-green-400">{formatVND(item.totalRevenue)}</p>
+                <p className="font-bold text-sm text-green-400 flex-shrink-0">
+                  {formatVND(item.totalRevenue)}
+                </p>
               </div>
             ))}
           </div>

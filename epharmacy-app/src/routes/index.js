@@ -17,6 +17,7 @@ import MapScreen from "../screens/MapScreen";
 import MapboxWebMap from "../components/MapboxWebMap";
 import ChangePasswordScreen from "../components/ChangePasswordScreen";
 import CheckoutScreen from "../screens/CheckoutScreen";
+import OrderHistoryScreen from "../screens/OrderHistoryScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -36,6 +37,13 @@ const Routes = () => {
         <Stack.Screen name="Map" component={MapScreen} options={{ headerShown: false }} />
         <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Checkout" component={CheckoutScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="OrderHistory" options={{headerShown: false}}>
+          {() => (
+            <ProtectedRoute>
+              <OrderHistoryScreen />
+            </ProtectedRoute>
+          )}
+        </Stack.Screen>
         <Stack.Screen name="DetailsMedicine" options={{ headerShown: false }}>
           {() => (
             <ProtectedRoute>
