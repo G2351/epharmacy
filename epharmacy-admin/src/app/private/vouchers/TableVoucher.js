@@ -1,7 +1,6 @@
 "use client";
 import React, { useCallback, useState } from "react";
 import { nanoid } from "nanoid";
-import DatePicker from "react-datepicker";
 import {
   Modal,
   ModalContent,
@@ -62,7 +61,7 @@ function TableVoucher() {
   const [deleteVoucher, { isLoading: loadingDelete }] =
     useDeleteVoucherMutation();
 
-  // ✅ Cần đủ 4 fields: name, voucher_code, discount_amount, expired_at
+  
   const handleCheckCreate = () => {
     if (voucherDetail) {
       const requiredFields = ["name", "voucher_code", "discount_amount", "expired_at"];
@@ -280,7 +279,7 @@ function TableVoucher() {
                 handleChangeVoucher("voucher_code", e.target.value)
               }
             />
-            {/* ✅ Thêm discount_amount vào edit */}
+            {}
             <Input
               label="Giá trị giảm giá (đ)"
               type="number"
@@ -291,17 +290,18 @@ function TableVoucher() {
                 handleChangeVoucher("discount_amount", +e.target.value)
               }
             />
-            <p>Expired at: </p>
-            <DatePicker
-              selected={voucherDetail?.expired_at}
-              onChange={(date) => handleChangeVoucher("expired_at", date)}
+            <Input
+              label="Ngày hết hạn"
+              type="date"
+              value={voucherDetail?.expired_at ? moment(voucherDetail.expired_at).format("YYYY-MM-DD") : ""}
+              onChange={(e) => handleChangeVoucher("expired_at", e.target.value)}
             />
           </>
         );
       case "create":
         return (
           <>
-            {/* ✅ Fix: Input Tên voucher đúng field */}
+            {}
             <Input
               label="Tên voucher"
               isInvalid={errors?.["name"] ? true : false}
@@ -309,7 +309,7 @@ function TableVoucher() {
               value={voucherDetail?.name || ""}
               onChange={(e) => handleChangeVoucher("name", e.target.value)}
             />
-            {/* ✅ Thêm discount_amount vào create */}
+            {}
             <Input
               label="Giá trị giảm giá (đ)"
               type="number"
@@ -335,11 +335,12 @@ function TableVoucher() {
                 handleChangeVoucher("voucher_code", e.target.value)
               }
             />
-            {/* ✅ Bỏ Select user — voucher dùng cho tất cả */}
-            <p>Expired at: </p>
-            <DatePicker
-              selected={voucherDetail?.expired_at}
-              onChange={(date) => handleChangeVoucher("expired_at", date)}
+            {}
+            <Input
+              label="Ngày hết hạn"
+              type="date"
+              value={voucherDetail?.expired_at ? moment(voucherDetail.expired_at).format("YYYY-MM-DD") : ""}
+              onChange={(e) => handleChangeVoucher("expired_at", e.target.value)}
             />
           </>
         );

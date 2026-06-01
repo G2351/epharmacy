@@ -18,6 +18,7 @@ class OrderService {
       voucher_code, discount_amount,
       shipping_fee = 20000,
       total_amount,
+      payment_method = "stripe",
     } = payload;
 
     if (!phone?.trim()) throw new BadRequestError("Vui lòng nhập số điện thoại!");
@@ -44,12 +45,20 @@ class OrderService {
       shipping_fee,
       total_amount,
       status: "pending",
+      payment_method,
     });
 
     await Cart.update(
       { order_id: order.id, status: "done" },
       { where: { id: cart_ids } }
     );
+
+    for (const cart of carts) {
+      await Medicine.decrement("stock", {
+        by: cart.quantity,
+        where: { id: cart.product_id },
+      });
+    }
 
     return order;
   };
