@@ -24,13 +24,6 @@ export default function Header() {
         </Link>
       </div>
 
-      {/* CENTER - SEARCH */}
-      <div className="flex-1 flex justify-center px-6">
-        <div className="w-full max-w-[500px]">
-          <Search />
-        </div>
-      </div>
-
       {/* RIGHT - ADMIN */}
       <div className="flex items-center justify-end min-w-[200px]">
         <Action />

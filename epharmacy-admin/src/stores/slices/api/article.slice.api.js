@@ -9,12 +9,12 @@ export const articleSliceApi = createApi({
   tagTypes: ["Articles"],
   endpoints: (builder) => ({
     getAllArticles: builder.query({
-      query: ({ page = 1, limit = 10 }) => ({
+      query: ({ page = 1, limit = 10, search = "" }) => ({
         url: ARTICLE,
         method: "GET",
-        params: { page, limit },
+        params: { page, limit, q: search },
       }),
-      providesTags: (result, error, id) => [{ type: "Articles", id: "LIST" }],
+      providesTags: () => [{ type: "Articles", id: "LIST" }],
     }),
     getArticleDetail: builder.query({
       query: (id) => ({

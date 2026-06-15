@@ -9,7 +9,7 @@ import {
   useUpdateProductMutation, useDeleteProductMutation,
 } from "@/stores/slices/api/product.slice.api";
 import { useGetAllCategoryMedicineQuery } from "@/stores/slices/api/category-medicine.slice.api";
-import { useGetAllBrandsQuery } from "@/stores/slices/api/brand.slice.api"; // 👈 thêm
+import { useGetAllBrandsQuery } from "@/stores/slices/api/brand.slice.api";
 import {
   Table, TableHeader, TableColumn, TableBody, TableRow, TableCell,
   Tooltip, Pagination,
@@ -40,6 +40,7 @@ function TableProduct() {
   const [errors, setErrors] = useState({});
   const isError = _.some(errors, (value) => value !== null);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const [searchText, setSearchText] = useState("");
 
   const [createProduct, { isLoading: loadingCreate }] = useCreateProductMutation();
   const [updateProduct, { isLoading: loadingUpdate }] = useUpdateProductMutation();
@@ -47,10 +48,27 @@ function TableProduct() {
 
   const { data: medicineCategory, isLoading: isLoadingCategory } =
     useGetAllCategoryMedicineQuery({ page: 1, limit: 100 });
-  const { data: brandData } = useGetAllBrandsQuery({ page: 1, limit: 100 }); // 👈 thêm
+  const { data: brandData } = useGetAllBrandsQuery({ page: 1, limit: 100 });
 
   const [query, setQuery] = useState(queryInit);
   const { data, isLoading } = useGetAllProductsQuery(query);
+
+  const debouncedSearch = useCallback(
+    _.debounce((value) => {
+      setQuery((prev) => ({ ...prev, page: 1, search: value }));
+    }, 400),
+    []
+  );
+
+  const handleSearch = (e) => {
+    setSearchText(e.target.value);
+    debouncedSearch(e.target.value);
+  };
+
+  const handleClearSearch = () => {
+    setSearchText("");
+    setQuery((prev) => ({ ...prev, page: 1, search: "" }));
+  };
 
   const handleCheckCreate = () => {
     if (!productDetail) return false;
@@ -65,7 +83,7 @@ function TableProduct() {
       if (files?.length) {
         const formData = new FormData();
         files.forEach((file) => formData.append("image", file));
-        const res = await fetch(`${HOST_URL}/upload/image`, { method: "POST", body: formData }).then((r) => r.json());
+        const res = await fetch(`${HOST_URL}upload/image`, { method: "POST", body: formData }).then((r) => r.json());
         if (res?.data) imageUrl = res.data;
       }
       const dataCreate = { ...productDetail };
@@ -85,10 +103,13 @@ function TableProduct() {
       delete dataUpdate.updated_at;
       delete dataUpdate.categoryMedicine;
       delete dataUpdate.brand;
+      if (dataUpdate.stock !== undefined) dataUpdate.stock = Number(dataUpdate.stock);
+      if (dataUpdate.old_price !== undefined) dataUpdate.old_price = Number(dataUpdate.old_price);
+      if (dataUpdate.new_price !== undefined) dataUpdate.new_price = Number(dataUpdate.new_price);
       if (files?.length) {
         const formData = new FormData();
         files.forEach((file) => formData.append("image", file));
-        const res = await fetch(`${HOST_URL}/upload/image`, { method: "POST", body: formData }).then((r) => r.json());
+        const res = await fetch(`${HOST_URL}upload/image`, { method: "POST", body: formData }).then((r) => r.json());
         if (res?.data) dataUpdate.image = res.data;
       }
       const resUpdate = await updateProduct(dataUpdate).unwrap();
@@ -121,19 +142,26 @@ function TableProduct() {
     validate(field, value);
     setProductDetail({ ...productDetail, [field]: value });
   };
+
   const handleOpenDetail = (product, type) => {
-    setProductDetail({ ...product });
-    setProductClone({ ...product });
+    const normalized = {
+      ...product,
+      brand_name: product?.brand?.name || "",
+    };
+    setProductDetail(normalized);
+    setProductClone(_.cloneDeep(normalized));
     setTypeAction(type);
     setErrors({});
     onOpen();
   };
+
   const handleOpenModalAddNew = (type) => {
     setTypeAction(type);
     setErrors({});
     setProductDetail({});
     onOpen();
   };
+
   const handleOpenModalDelete = (product, type) => {
     setProductDelete(product);
     setTypeAction(type);
@@ -221,9 +249,6 @@ function TableProduct() {
   const categoryMedicine = medicineCategory?.data?.categoryMedicine?.map((item) => ({
     key: String(item.id), label: item.name,
   })) || [];
-  const brands = brandData?.data?.brands?.map((item) => ({  // 👈 thêm
-    key: String(item.id), label: item.name,
-  })) || [];
 
   const getBodyModal = () => {
     switch (typeAction) {
@@ -269,7 +294,6 @@ function TableProduct() {
         return (
           <div className="flex flex-col gap-3">
             <UploadImage info={productDetail?.image} onFiles={setFiles} files={files} />
-
             <Input
               label="Tên thuốc"
               isRequired
@@ -278,7 +302,6 @@ function TableProduct() {
               value={productDetail?.name || ""}
               onChange={(e) => handleChangeProduct("name", e.target.value)}
             />
-
             <div className="flex gap-3">
               <Select
                 items={categoryMedicine}
@@ -294,29 +317,20 @@ function TableProduct() {
               >
                 {(cat) => <SelectItem key={cat.key}>{cat.label}</SelectItem>}
               </Select>
-
-              <Select
-                items={brands}
+              <Input
                 label="Thương hiệu"
                 className="flex-1"
-                defaultSelectedKeys={
-                  productDetail?.brand_id
-                    ? [String(productDetail.brand_id)]
-                    : []
-                }
-                onChange={(e) => handleChangeProduct("brand_id", e.target.value)}
-              >
-                {(brand) => <SelectItem key={brand.key}>{brand.label}</SelectItem>}
-              </Select>
+                placeholder="Nhập tên thương hiệu..."
+                value={productDetail?.brand_name || ""}
+                onChange={(e) => handleChangeProduct("brand_name", e.target.value)}
+              />
             </div>
-
             <Input
               label="Quy cách đóng gói"
               placeholder="Ví dụ: Hộp 10 miếng, Vỉ 5 viên..."
               value={productDetail?.packaging || ""}
               onChange={(e) => handleChangeProduct("packaging", e.target.value)}
             />
-
             <Textarea
               label="Mô tả"
               isRequired
@@ -325,7 +339,6 @@ function TableProduct() {
               value={productDetail?.description || ""}
               onChange={(e) => handleChangeProduct("description", e.target.value)}
             />
-
             <div className="flex gap-3">
               <Input
                 label="Giá gốc (đ)"
@@ -353,14 +366,12 @@ function TableProduct() {
                 onChange={(e) => handleChangeProduct("stock", e.target.value)}
               />
             </div>
-
             <Textarea
               label="Trường hợp dùng"
               placeholder="Mô tả các trường hợp nên sử dụng sản phẩm..."
               value={productDetail?.indications || ""}
               onChange={(e) => handleChangeProduct("indications", e.target.value)}
             />
-
             <Textarea
               label="Trường hợp không dùng"
               placeholder="Mô tả chống chỉ định hoặc trường hợp cần tránh..."
@@ -374,7 +385,6 @@ function TableProduct() {
         return (
           <div className="flex flex-col gap-3">
             <UploadImage info={null} onFiles={setFiles} files={files} />
-
             <Input
               label="Tên thuốc"
               isRequired
@@ -383,7 +393,6 @@ function TableProduct() {
               value={productDetail?.name || ""}
               onChange={(e) => handleChangeProduct("name", e.target.value)}
             />
-
             <div className="flex gap-3">
               <Select
                 items={categoryMedicine}
@@ -394,24 +403,20 @@ function TableProduct() {
               >
                 {(cat) => <SelectItem key={cat.key}>{cat.label}</SelectItem>}
               </Select>
-
-              <Select
-                items={brands}
+              <Input
                 label="Thương hiệu"
                 className="flex-1"
-                onChange={(e) => handleChangeProduct("brand_id", e.target.value)}
-              >
-                {(brand) => <SelectItem key={brand.key}>{brand.label}</SelectItem>}
-              </Select>
+                placeholder="Nhập tên thương hiệu..."
+                value={productDetail?.brand_name || ""}
+                onChange={(e) => handleChangeProduct("brand_name", e.target.value)}
+              />
             </div>
-
             <Input
               label="Quy cách đóng gói"
               placeholder="Ví dụ: Hộp 10 miếng, Vỉ 5 viên..."
               value={productDetail?.packaging || ""}
               onChange={(e) => handleChangeProduct("packaging", e.target.value)}
             />
-
             <Textarea
               label="Mô tả"
               isRequired
@@ -420,7 +425,6 @@ function TableProduct() {
               value={productDetail?.description || ""}
               onChange={(e) => handleChangeProduct("description", e.target.value)}
             />
-
             <div className="flex gap-3">
               <Input
                 label="Giá gốc (đ)"
@@ -448,14 +452,12 @@ function TableProduct() {
                 onChange={(e) => handleChangeProduct("stock", e.target.value)}
               />
             </div>
-
             <Textarea
               label="Trường hợp dùng"
               placeholder="Mô tả các trường hợp nên sử dụng sản phẩm..."
               value={productDetail?.indications || ""}
               onChange={(e) => handleChangeProduct("indications", e.target.value)}
             />
-
             <Textarea
               label="Trường hợp không dùng"
               placeholder="Mô tả chống chỉ định hoặc trường hợp cần tránh..."
@@ -491,11 +493,19 @@ function TableProduct() {
 
   return (
     <>
-      <div className="flex gap-3 mb-4">
+      <div className="flex gap-3 mb-4 items-center">
         <Button color="primary" onClick={() => handleOpenModalAddNew("create")} startContent={<IoMdAddCircleOutline fontSize="1.2rem" />}>
           Tạo mới
         </Button>
         <CategoryProduct />
+        <Input
+          placeholder="Tìm kiếm thuốc..."
+          value={searchText}
+          onChange={handleSearch}
+          className="max-w-xs"
+          isClearable
+          onClear={handleClearSearch}
+        />
       </div>
 
       <Table

@@ -1,11 +1,10 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import API_APP from "../config";
+
 const changeProfileUser = async (data) => {
-  // try {
   const res = await fetch(`${API_APP}/v1/api/auth/handleChangeInfo`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -13,10 +12,10 @@ const changeProfileUser = async (data) => {
     throw new Error(errData.message || "Something went wrong");
   }
   const dataResponse = await res.json();
-  console.log("Response change profileUser : ", dataResponse);
+  if (data.name) await AsyncStorage.setItem("name", data.name);
+  if (data.phone) await AsyncStorage.setItem("phone", data.phone);
+  if (data.address) await AsyncStorage.setItem("address", data.address);
   return dataResponse;
-  // } catch (error) {
-  //   console.log("Error changeProfileUser", error.message || error);
-  // }
 };
+
 export default changeProfileUser;

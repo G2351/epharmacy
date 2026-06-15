@@ -1,19 +1,22 @@
 const { NotFoundError, BadRequestError } = require("../core/error.response");
 const { Article } = require("../models/index");
+const { Op } = require("sequelize");
+
 class ArticleService {
-  static getAllArticles = async ({ page, limit }) => {
+  static getAllArticles = async ({ page, limit, q }) => {
     const options = {
       order: [["created_at", "desc"]],
     };
     if (!+page || page < 0) {
       page = 1;
     }
-
     if (limit && Number.isInteger(+limit)) {
       options.limit = limit;
       const offset = (page - 1) * limit;
       options.offset = offset;
     }
+    options.where = {};
+    if (q) options.where.title = { [Op.iLike]: `%${q}%` };
 
     const { rows: articles, count } = await Article.findAndCountAll(options);
     return {
@@ -34,6 +37,7 @@ class ArticleService {
     });
     return deleted;
   };
+
   static updateArticle = async ({ id }, payload) => {
     const article = await Article.findByPk(id);
     if (!article) {
@@ -45,6 +49,7 @@ class ArticleService {
       },
     });
   };
+
   static getArticleDetail = async ({ id }) => {
     const article = await Article.findByPk(id);
     if (!article) {
@@ -52,6 +57,7 @@ class ArticleService {
     }
     return article;
   };
+
   static createArticle = async (payload) => {
     const { title, description, content, image } = payload;
     const article = await Article.create(payload);

@@ -6,20 +6,18 @@ class VoucherService {
   static findAllVouchers = async ({ page, limit }) => {
     const options = {
       order: [["created_at", "desc"]],
+      where: {
+        is_used: false,
+        expired_at: { [Op.gte]: new Date() },
+      },
     };
-    if (!+page || page < 0) {
-      page = 1;
-    }
+    if (!+page || page < 0) page = 1;
     if (limit && Number.isInteger(+limit)) {
-      options.limit = limit;
-      const offset = (page - 1) * limit;
-      options.offset = offset;
+      options.limit = +limit;
+      options.offset = (page - 1) * +limit;
     }
     const { rows: vouchers, count } = await Voucher.findAndCountAll(options);
-    return {
-      vouchers,
-      count,
-    };
+    return { vouchers, count };
   };
   static getAllVouchers = async ({ page, limit, userId }) => {
     const options = {

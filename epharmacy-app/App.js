@@ -11,7 +11,8 @@ import { PUBLIC_KEY } from "./src/utils/config";
 import { useEffect } from "react";
 import * as Linking from "expo-linking";
 import { Alert } from "react-native";
-// console.log(PUBLIC_KEY);
+import { LogBox } from "react-native";
+LogBox.ignoreLogs(["A props object containing a \"key\" prop"]);
 
 const originalError = console.error;
 console.error = (...args) => {

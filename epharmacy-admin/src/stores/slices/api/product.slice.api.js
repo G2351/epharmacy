@@ -9,12 +9,12 @@ export const productSliceApi = createApi({
   tagTypes: ["Products"],
   endpoints: (builder) => ({
     getAllProducts: builder.query({
-      query: ({ page = 1, limit = 10 }) => ({
+      query: ({ page = 1, limit = 10, search = "", categoryId = "", sortBy = "" } = {}) => ({
         url: PRODUCT,
         method: "GET",
-        params: { page, limit, search },
+        params: { page, limit, q: search, categoryId, sortBy },
       }),
-      providesTags: (result, error, id) => [{ type: "Products", id: "LIST" }],
+      providesTags: () => [{ type: "Products", id: "LIST" }],
     }),
     getProductDetail: builder.query({
       query: (id) => ({
@@ -29,7 +29,10 @@ export const productSliceApi = createApi({
         method: "PATCH",
         body: patch,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: "Products", id }],
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Products", id },
+        { type: "Products", id: "LIST" },
+      ],
     }),
     createProduct: builder.mutation({
       query: (body) => ({
@@ -51,6 +54,7 @@ export const productSliceApi = createApi({
     }),
   }),
 });
+
 export const productApiReducer = productSliceApi.reducer;
 export const productApiReducerPath = productSliceApi.reducerPath;
 export const productApiMiddleware = productSliceApi.middleware;

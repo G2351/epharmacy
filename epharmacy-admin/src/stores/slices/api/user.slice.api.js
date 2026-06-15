@@ -1,7 +1,8 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { SERVER_URL } from "@/configs/site.config";
 import { endPointApi } from "@/helpers/endPointApi";
-const { USERS } = endPointApi;
+
+const { USERS, USER } = endPointApi;
 
 export const userSliceApi = createApi({
   reducerPath: "userApi",
@@ -14,11 +15,31 @@ export const userSliceApi = createApi({
         method: "GET",
         params: { page, limit },
       }),
-      providesTags: (result, error, id) => [{ type: "Users", id: "LIST" }],
+      providesTags: [{ type: "Users", id: "LIST" }],
+    }),
+    updateUser: builder.mutation({
+      query: ({ id, ...patch }) => ({
+        url: `${USER}/${id}`,
+        method: "PATCH",
+        body: patch,
+      }),
+      invalidatesTags: [{ type: "Users", id: "LIST" }],
+    }),
+    deleteUser: builder.mutation({
+      query: (id) => ({
+        url: `${USER}/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "Users", id: "LIST" }],
     }),
   }),
 });
+
 export const userApiReducer = userSliceApi.reducer;
 export const userApiReducerPath = userSliceApi.reducerPath;
 export const userApiMiddleware = userSliceApi.middleware;
-export const { useGetAllUsersQuery } = userSliceApi;
+export const {
+  useGetAllUsersQuery,
+  useUpdateUserMutation,
+  useDeleteUserMutation,
+} = userSliceApi;

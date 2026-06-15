@@ -11,6 +11,7 @@ router.post(
   "/getVoucherByCode",
   asyncHandler(VoucherController.getVoucherByCode)
 );
+router.get("/voucher/all", asyncHandler(VoucherController.findAllVouchers));
 router.post("/voucher", asyncHandler(VoucherController.createVoucher));
 router.patch("/voucher/:id", asyncHandler(VoucherController.updateVoucher));
 router.delete("/voucher/:id", asyncHandler(VoucherController.deleteVoucher));

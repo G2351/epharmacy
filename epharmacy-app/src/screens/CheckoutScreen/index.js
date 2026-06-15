@@ -20,13 +20,13 @@ const CheckoutScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { items, totalAmount } = route.params;
-  const { userId, email, name } = useSelector((state) => state.profile);
+  const { userId, email, name, phone: savedPhone, address: savedAdress } = useSelector((state) => state.profile);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
-  const [address, setAddress] = useState("");
-  const [detailAddress, setDetailAddress] = useState("");
+  const [address, setAddress] = useState(savedAdress || "");
+  const [detailAddress, setDetailAddress] = useState(savedAdress || "");
   const [areaAddress, setAreaAddress] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(savedPhone || "");
   const [note, setNote] = useState("");
   const [voucherCode, setVoucherCode] = useState("");
   const [voucher, setVoucher] = useState(null);
