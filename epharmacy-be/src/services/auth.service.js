@@ -26,6 +26,10 @@ class AuthService {
     if (data?.password && data?.oldPassword) {
       const match = await bcrypt.compare(data.oldPassword, foundUser.password);
       if (!match) throw new AuthFailureError("Authentication Error");
+
+      if (data.password === data.oldPassword){
+        throw new BadRequestError("Mật khẩu mới phải khác mật khẩu cũ!");
+      }
       const hashPassword = bcrypt.hashSync(data.password, 10);
       objectUpdate.password = hashPassword;
     }

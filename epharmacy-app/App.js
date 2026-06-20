@@ -30,8 +30,12 @@ const AppInitializer = ({ children }) => {
   useEffect(() => {
     const loadProfile = async () => {
       const profile = await getProfile();
+      console.log("=== LOADED PROFILE FROM STORAGE ===", profile);
       if (profile?.userId) {
         dispatch(setProfileRedux(profile));
+        console.log("=== DISPATCHED TO REDUX ===");
+      } else {
+        console.log("=== NO userId FOUND, SKIP DISPATCH ===")
       }
     };
     loadProfile();

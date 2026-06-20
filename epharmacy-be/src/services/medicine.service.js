@@ -84,7 +84,12 @@ class MedicineService {
   };
 
   static getMedicineDetail = async ({ id }) => {
-    const medicine = await Medicine.findByPk(id);
+    const medicine = await Medicine.findByPk(id, {
+      include: [
+        { model: CategoryMedicine, as: "categoryMedicine", attributes: ["id", "name"]},
+        { model: Brand, as: "brand", attributes: ["id", "name"] },
+      ],
+    });
     if (!medicine) throw new NotFoundError("Medicine không tồn tại!");
     return medicine;
   };
