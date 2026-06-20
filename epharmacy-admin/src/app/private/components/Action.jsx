@@ -23,8 +23,7 @@ export default function Action() {
           />
         </DropdownTrigger>
         <DropdownMenu aria-label="Actions">
-          <DropdownItem key="info">Thông tin cá nhân</DropdownItem>
-          <DropdownItem key="setting">Cài đặt</DropdownItem>
+          
           <DropdownItem key="logout" color="danger" onClick={handleLogout}>
             Đăng xuất
           </DropdownItem>

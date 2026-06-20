@@ -1,7 +1,7 @@
 "use strict";
 const { NotFoundError, BadRequestError } = require("../core/error.response");
-const { Cart, User, Order, Medicine } = require("../models/index");
-const { Op, fn, col, literal } = require("sequelize");
+const { Cart, User, Order, Medicine, Voucher, VoucherUsage, sequelize } = require("../models/index");
+const { Op, fn, col, literal, where } = require("sequelize");
 
 const generateOrderCode = () => {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -15,7 +15,7 @@ class OrderService {
       user_id, cart_ids,
       recipient_name, email,
       phone, address, note,
-      voucher_code, discount_amount,
+      voucher_code,
       shipping_fee = 20000,
       total_amount,
       payment_method = "stripe",
@@ -25,42 +25,82 @@ class OrderService {
     if (!address?.trim()) throw new BadRequestError("Vui lòng nhập địa chỉ giao hàng!");
     if (!recipient_name?.trim()) throw new BadRequestError("Vui lòng nhập họ tên!");
 
-    const carts = await Cart.findAll({
-      where: { id: cart_ids, user_id, status: "pending" },
-    });
-    if (carts.length !== cart_ids.length) {
-      throw new BadRequestError("Một số sản phẩm không hợp lệ!");
-    }
-
-    const order = await Order.create({
-      order_code: generateOrderCode(),
-      user_id,
-      recipient_name,
-      email,
-      phone,
-      address,
-      note,
-      voucher_code,
-      discount_amount: discount_amount || 0,
-      shipping_fee,
-      total_amount,
-      status: "pending",
-      payment_method,
-    });
-
-    await Cart.update(
-      { order_id: order.id, status: "done" },
-      { where: { id: cart_ids } }
-    );
-
-    for (const cart of carts) {
-      await Medicine.decrement("stock", {
-        by: cart.quantity,
-        where: { id: cart.product_id },
+    return await sequelize.transaction(async (t) => {
+      const carts = await Cart.findAll({
+        where: { id: cart_ids, user_id, status: "pending" },
+        transaction: t,
       });
-    }
+      if (carts.length !== cart_ids.length) {
+        throw new BadRequestError("Một số sản phẩm không hợp lệ!");
+      }
 
-    return order;
+      let voucher = null;
+      let discount_amount = 0;
+
+      if (voucher_code) {
+        voucher = await Voucher.findOne({
+          where: { voucher_code },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (!voucher) {
+          throw new BadRequestError("Mã giảm giá không hợp lệ!");
+        }
+
+        if (voucher.expired_at && new Date(voucher.expired_at) < new Date()) {
+          throw new BadRequestError("Mã giảm giá đã hết hạn!");
+        }
+
+        const alreadyUsed = await VoucherUsage.findOne({
+          where: { voucher_id: voucher.id, user_id },
+          transaction: t,
+        });
+        if (alreadyUsed) {
+          throw new BadRequestError("Mã giảm giá đã được sử dụng!");
+        }
+        discount_amount = voucher.discount_amount;
+      }
+
+      const order = await Order.create({
+        order_code: generateOrderCode(),
+        user_id,
+        recipient_name,
+        email,
+        phone,
+        address,
+        note,
+        voucher_code: voucher_code || null,
+        discount_amount,
+        shipping_fee,
+        total_amount,
+        status: "pending",
+        payment_method,
+      }, { transaction: t });
+
+      await Cart.update(
+        { order_id: order.id, status: "done" },
+        { where: { id: cart_ids }, transaction: t }
+      );
+
+      for (const cart of carts) {
+        await Medicine.decrement("stock", {
+          by: cart.quantity,
+          where: { id: cart.product_id },
+          transaction: t,
+        });
+      }
+
+      if (voucher) {
+        await VoucherUsage.create({
+          voucher_id: voucher.id,
+          user_id,
+          order_id: order.id,
+        }, { transaction: t });
+      }
+
+      return order;
+    });
   };
 
   static getOrderHistory = async ({ user_id, page = 1, limit = 10 }) => {

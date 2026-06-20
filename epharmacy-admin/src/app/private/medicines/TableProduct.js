@@ -185,10 +185,10 @@ function TableProduct() {
         return (
           <div className="w-img-product h-img-product relative overflow-hidden rounded-product border border-default-100 bg-white flex items-center justify-center">
             <img
-              src={product.image || "https://via.placeholder.com/80"}
+              src={product.image || "https://placehold.co/80x80?text=No+Image"}
               alt={product.name}
               className="w-full h-full object-contain p-1"
-              onError={(e) => { e.target.src = "https://via.placeholder.com/80"; }}
+              onError={(e) => { e.target.src = "https://placehold.co/80x80?text=No+Image"; }}
             />
           </div>
         );
@@ -256,10 +256,10 @@ function TableProduct() {
         return (
           <div className="flex gap-6">
             <img
-              src={productDetail?.image || "https://via.placeholder.com/200"}
+              src={productDetail?.image || "https://placehold.co/200x200?text=No+Image"}
               alt={productDetail?.name}
               className="w-48 h-48 object-cover rounded-xl flex-shrink-0"
-              onError={(e) => { e.target.src = "https://via.placeholder.com/200"; }}
+              onError={(e) => { e.target.src = "https://placehold.co/200x200?text=No+Image"; }}
             />
             <div className="flex flex-col gap-3 flex-1">
               <div><p className="text-xs text-gray-400">Tên thuốc</p><p className="font-bold text-lg">{productDetail?.name}</p></div>
